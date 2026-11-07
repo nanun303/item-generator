@@ -1,0 +1,45 @@
+# Baut beim Veröffentlichen eines GitHub-Releases die Modul-ZIP und hängt sie samt module.json an.
+# Version kommt aus dem Tag (z. B. "v0.2.0"), Repo-Adresse, Manifest- und Download-Link aus dem Repository.
+name: Modul-Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version und Links setzen
+        working-directory: km-item-generator
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Tags, die keine Versionsnummer sind (z. B. "test"), behalten die Version aus module.json
+          if ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::warning::Tag '${GITHUB_REF_NAME}' ist keine Versionsnummer, nutze Version aus module.json"
+            VERSION="$(jq -r .version module.json)"
+          fi
+          REPO="https://github.com/${GITHUB_REPOSITORY}"
+          jq --arg v "$VERSION" \
+             --arg url "$REPO" \
+             --arg manifest "$REPO/releases/latest/download/module.json" \
+             --arg download "$REPO/releases/download/${GITHUB_REF_NAME}/km-item-generator.zip" \
+             '.version = $v | .url = $url | .manifest = $manifest | .download = $download' module.json > module.tmp
+          mv module.tmp module.json
+          cat module.json
+
+      - name: ZIP bauen (module.json im Wurzelverzeichnis)
+        working-directory: km-item-generator
+        run: zip -r ../km-item-generator.zip . -x "README.md"
+
+      - name: Dateien an den Release hängen
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            km-item-generator/module.json
+            km-item-generator.zip

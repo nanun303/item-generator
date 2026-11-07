@@ -27,6 +27,32 @@ export const EXAMPLES = {
       }
     ]
   },
+  hat: {
+    label: "Hut der Zauberkunst (Zaubertrick leihen, Stufe 3)",
+    data: {
+      type: "equipment",
+      name: "Hut der Zauberkunst",
+      level: 3,
+      price: 60,
+      bulk: "-",
+      usage: "wornheadwear",
+      traits: ["arcane", "invested", "magical"],
+      effects: [{ bonus: 1, to: "arcana", type: "item" }],
+      activations: [
+        {
+          name: "Zauber leihen",
+          actions: 2,
+          traits: ["concentrate", "manipulate"],
+          frequency: "einmal pro Tag",
+          asAction: true,
+          borrowSpell: { tradition: "arcane", skill: "arcana", dc: 15, rarity: "common" },
+          text: "Du greifst in die Krempe und tastest nach einem Zauber, den du nicht kennst. Lege einen Wurf auf Arkane Künste gegen SG 15 ab. Bei Erfolg wählst du einen gewöhnlichen arkanen Zaubertrick, den du nicht kennst, und wirkst ihn sofort als angeborenen arkanen Zauber. Bei Fehlschlag verpufft die Magie. Der Versuch verbraucht die Nutzung des Tages."
+        }
+      ],
+      description:
+        "Ein spitzer, nachtblauer Hut, bestickt mit silbernen Sternen. In seiner Krempe scheint das Echo unzähliger Zauber nachzuklingen.\n\nSolange du ihn investiert hast, erhältst du einen Gegenstandsbonus von +1 auf Arkane Künste."
+    }
+  },
   ring: {
     label: "Ring mit Bonus, Resistenz und Aktivierung",
     data: {
@@ -101,6 +127,11 @@ effects (werden zu Regelelementen):
 - optional bei jedem Effekt: "label", "predicate": ["..."]
 
 activations: [{"name": "...", "actions": 1|2|3|"reaction"|"free", "traits": [...], "frequency": "...", "trigger": "...", "text": "..."}]
+- "asAction": true legt die Aktivierung zusätzlich als Aktion an, die der Träger im Charakterbogen hat, solange das Item angelegt ist.
+  "frequency" wie "einmal pro Tag" wird dabei ein Zähler, der bei der täglichen Vorbereitung zurückgesetzt wird.
+- "borrowSpell": {"tradition": "arcane", "skill": "arcana", "dc": 15, "rarity": "common"} fügt der Aktion einen Knopf
+  "Zauber leihen" hinzu: Wurf gegen SG, bei Erfolg Auswahl eines Zaubertricks der Tradition, den der Charakter nicht kennt,
+  gewirkt als angeborener Zauber.
 system: { ... } setzt beliebige Systemfelder direkt (für Sonderfälle)
 
 Hinweis: Getragene magische Items brauchen den Trait "invested", damit ihre Effekte wirken.`;

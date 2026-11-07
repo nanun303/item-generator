@@ -148,6 +148,11 @@ async function buildItem(entry, ctx, log) {
   const description = buildDescription(entry, log);
   if (description !== null) sys.description = { ...(sys.description ?? {}), value: description };
 
+  // Aktivierungen mit "asAction" werden eigene Aktionen, die das Item seinem Träger gewährt.
+  // Sie werden beim Erstellen angelegt und per GrantItem verknüpft (siehe foundry.js), daher nur vorgemerkt.
+  const grants = asArray(entry.activations).filter((a) => a?.asAction).map((a) => buildAction(a, entry, log));
+  if (grants.length) item._grants = grants;
+
   // Notausgang: beliebige Systemfelder direkt setzen
   if (entry.system && typeof entry.system === "object") deepMerge(sys, entry.system);
 
@@ -368,8 +373,71 @@ function buildDescription(entry, log) {
     if (a.requirements) parts.push(`<strong>Voraussetzungen</strong> ${escapeHtml(a.requirements)}`);
     html += `<hr /><p>${parts.join("; ")}</p>`;
     if (a.text) html += toHtml(`Effekt: ${a.text}`).replace("<p>Effekt:", "<p><strong>Effekt</strong>");
+    if (a.asAction) html += "<p><em>Steht als Aktion im Charakterbogen, solange der Gegenstand angelegt ist.</em></p>";
   }
   return html;
+}
+
+/* -------------------------------------------- */
+/*  Gewährte Aktionen                           */
+/* -------------------------------------------- */
+
+const FREQUENCY_WORDS = [
+  [/runde|round/i, "round"],
+  [/zug|turn/i, "turn"],
+  [/stunde|hour/i, "PT1H"],
+  [/minute/i, "PT1M"],
+  [/tag|day/i, "day"]
+];
+const COUNT_WORDS = { einmal: 1, once: 1, zweimal: 2, twice: 2, dreimal: 3, thrice: 3 };
+
+/** { max: 1, per: "day" } aus Objekt oder Text wie "einmal pro Tag", "1/Tag", "2/day". */
+export function parseUses(v, log) {
+  if (v === undefined || v === null || v === "") return null;
+  if (typeof v === "object") return { max: Math.max(1, Number(v.max) || 1), per: v.per ?? "day" };
+  const s = String(v).toLowerCase();
+  const per = FREQUENCY_WORDS.find(([rx]) => rx.test(s))?.[1];
+  if (!per) {
+    log.warn(`Häufigkeit „${v}“ nicht erkannt (z. B. "einmal pro Tag" oder {"max": 1, "per": "day"}), kein Zähler.`);
+    return null;
+  }
+  const word = Object.keys(COUNT_WORDS).find((w) => s.includes(w));
+  const max = word ? COUNT_WORDS[word] : Number(s.match(/(\d+)/)?.[1] ?? 1);
+  return { max, per };
+}
+
+/** Text für den Zauber-leihen-Knopf (siehe borrow.js). */
+export function borrowSpellTag(b) {
+  const o = { tradition: "arcane", skill: "arcana", dc: 15, rarity: "common", ...b };
+  return `@BorrowSpell[tradition:${o.tradition}|skill:${o.skill}|dc:${o.dc}|rarity:${o.rarity}]`;
+}
+
+function buildAction(a, entry, log) {
+  const actionType = a.actions === "reaction" ? "reaction" : a.actions === "free" ? "free" : "action";
+  const count = Number(a.actions);
+  const parts = [];
+  if (a.trigger) parts.push(`<strong>Auslöser</strong> ${escapeHtml(a.trigger)}`);
+  if (a.requirements) parts.push(`<strong>Voraussetzungen</strong> ${escapeHtml(a.requirements)}`);
+  let html = parts.length ? `<p>${parts.join("; ")}</p>` : "";
+  html += toHtml(a.text);
+  if (a.borrowSpell) html += `<p>${borrowSpellTag(a.borrowSpell)}</p>`;
+  html += `<p><em>Gewährt von: ${escapeHtml(entry.name)}</em></p>`;
+
+  const uses = parseUses(a.uses ?? a.frequency, log);
+  return {
+    name: a.name ? String(a.name) : `${entry.name}: Aktivieren`,
+    type: "action",
+    ...(a.img || entry.img ? { img: a.img ?? entry.img } : {}),
+    system: {
+      description: { value: html, gm: "" },
+      actionType: { value: actionType },
+      actions: { value: actionType === "action" ? ([1, 2, 3].includes(count) ? count : 1) : null },
+      traits: { value: asArray(a.traits).map(String), otherTags: [] },
+      category: null,
+      ...(uses ? { frequency: { ...uses, value: uses.max } } : {})
+    },
+    flags: { [MODULE_ID]: { grantedBy: String(entry.name) } }
+  };
 }
 
 /* -------------------------------------------- */

@@ -1,0 +1,37 @@
+{{!-- Felder immer mit "this." ansprechen: manche Namen sind auch PF2e-Handlebars-Helfer --}}
+<div class="kmi-borrow-body">
+  <p><strong>{{this.actorName}}</strong> versucht, mit <em>{{this.sourceName}}</em> einen Zaubertrick zu leihen.</p>
+  {{#if this.uses}}<p class="kmi-meta">Nutzungen heute: {{this.uses.value}} / {{this.uses.max}}</p>{{/if}}
+
+  {{#if this.isCheck}}
+    {{#if this.usedUp}}
+    <p class="kmi-warning"><i class="fa-solid fa-hourglass-end"></i> Heute schon benutzt. Wieder verfügbar nach der täglichen Vorbereitung.</p>
+    {{else}}
+    <p>Lege einen Wurf auf <strong>{{this.skillLabel}}</strong> gegen <strong>SG {{this.dc}}</strong> ab. Der Versuch verbraucht die Nutzung, auch bei Fehlschlag.</p>
+    <footer class="kmi-footer">
+      <button type="button" data-action="cancel">Abbrechen</button>
+      <button type="button" data-action="roll" class="kmi-primary"><i class="fa-solid fa-dice-d20"></i> Würfeln</button>
+    </footer>
+    {{/if}}
+  {{/if}}
+
+  {{#if this.isChoose}}
+    <p class="kmi-success"><i class="fa-solid fa-check"></i> Geschafft! Wähle den Zaubertrick:</p>
+    {{#if this.choices.length}}
+    <select name="spell" class="kmi-spell-select">
+      {{#each this.choices}}<option value="{{this.uuid}}">{{this.name}}</option>{{/each}}
+    </select>
+    <footer class="kmi-footer">
+      <button type="button" data-action="cancel">Abbrechen</button>
+      <button type="submit" class="kmi-primary"><i class="fa-solid fa-wand-sparkles"></i> Wirken</button>
+    </footer>
+    {{else}}
+    <p class="kmi-warning">Keine passenden Zaubertricks gefunden.</p>
+    {{/if}}
+  {{/if}}
+
+  {{#if this.isFailed}}
+    <p class="kmi-error"><i class="fa-solid fa-xmark"></i> Die Magie verpufft. Der Hut ist für heute erschöpft.</p>
+    <footer class="kmi-footer"><button type="button" data-action="cancel">Schließen</button></footer>
+  {{/if}}
+</div>

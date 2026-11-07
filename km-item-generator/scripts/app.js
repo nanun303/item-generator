@@ -176,6 +176,11 @@ function summarize(item) {
     if (r && (r.potency || r.resilient || r.property?.length)) lines.push(`Runen: +${r.potency ?? 0}, Widerstand ${r.resilient ?? 0}${r.property?.length ? `, ${r.property.join(", ")}` : ""}`);
   }
   const rules = (s.rules ?? []).map(describeRule);
+  for (const g of item._grants ?? []) {
+    const f = g.system.frequency;
+    const borrow = g.system.description.value.includes("@BorrowSpell") ? ", mit Knopf „Zauber leihen“" : "";
+    rules.push(`Gewährt Aktion „${g.name}“${f ? ` (${f.max}/${f.per === "day" ? "Tag" : f.per})` : ""}${borrow}`);
+  }
   return {
     name: item.name,
     type: item.type,

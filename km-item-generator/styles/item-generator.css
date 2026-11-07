@@ -108,6 +108,37 @@
   margin: 0.25rem 0;
 }
 
+.kmi-borrow .kmi-borrow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kmi-borrow .kmi-success {
+  color: var(--color-level-success, #2a7);
+  margin: 0;
+}
+
+.kmi-borrow .kmi-spell-select {
+  width: 100%;
+}
+
+a.kmi-borrow-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.1em 0.5em;
+  border: 1px solid var(--color-border-dark-4, #777);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+a.kmi-borrow-button:hover {
+  background: rgba(0, 0, 0, 0.18);
+}
+
 .km-item pre {
   max-height: 16rem;
   overflow: auto;

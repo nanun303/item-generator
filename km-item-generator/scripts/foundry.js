@@ -69,11 +69,27 @@ async function ensureFolder(name) {
  */
 export async function createItems(items, { folderName, actor } = {}) {
   const folder = await ensureFolder(folderName);
-  const data = items.map((i) => ({ ...structuredClone(i), folder: folder?.id ?? null }));
-  const created = await getDocumentClass("Item").createDocuments(data);
+  const ItemCls = getDocumentClass("Item");
+  const sources = [];
+  for (const raw of items) {
+    const item = structuredClone(raw);
+    const grants = item._grants ?? [];
+    delete item._grants;
+    // Gewährte Aktionen zuerst als Welt-Items anlegen, dann per GrantItem verknüpfen.
+    // reevaluateOnUpdate: die Aktion erscheint beim Anlegen/Investieren und verschwindet beim Ablegen.
+    if (grants.length) {
+      const actions = await ItemCls.createDocuments(grants.map((g) => ({ ...g, folder: folder?.id ?? null })));
+      item.system.rules = [
+        ...(item.system.rules ?? []),
+        ...actions.map((a) => ({ key: "GrantItem", uuid: a.uuid, reevaluateOnUpdate: true }))
+      ];
+    }
+    sources.push(item);
+  }
+  const created = await ItemCls.createDocuments(sources.map((s) => ({ ...s, folder: folder?.id ?? null })));
   let given = 0;
   if (actor) {
-    const embedded = await actor.createEmbeddedDocuments("Item", items.map((i) => structuredClone(i)));
+    const embedded = await actor.createEmbeddedDocuments("Item", sources.map((s) => structuredClone(s)));
     given = embedded.length;
   }
   return { created, given };

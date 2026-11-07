@@ -9,7 +9,7 @@ const RUNE_LABEL = ["", "Schlag", "Schlag (groß)", "Schlag (überragend)"];
 export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options) {
     super(options);
-    this.state = {
+    this.formState = {
       json: "",
       example: "staglord",
       folder: "Item-Generator",
@@ -41,7 +41,7 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext() {
     return {
-      state: this.state,
+      state: this.formState,
       examples: Object.fromEntries(Object.entries(EXAMPLES).map(([k, v]) => [k, v.label])),
       result: this.result && {
         errors: this.result.errors,
@@ -65,7 +65,7 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
         ui.notifications.warn(`„${input.notGenerated}“ wurde nicht mit dem Item-Generator erstellt.`);
         return;
       }
-      this.state.json = JSON.stringify(input, null, 2);
+      this.formState.json = JSON.stringify(input, null, 2);
       this.result = null;
       await this.render();
     });
@@ -74,14 +74,14 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
   #readForm() {
     const FDE = foundry.applications.ux?.FormDataExtended ?? globalThis.FormDataExtended;
     const data = new FDE(this.element).object;
-    this.state = {
+    this.formState = {
       json: String(data.json ?? ""),
-      example: data.example ?? this.state.example,
+      example: data.example ?? this.formState.example,
       folder: String(data.folder ?? "").trim(),
       giveToToken: !!data.giveToToken
     };
-    game.settings.set(MODULE_ID, "state", this.state);
-    return this.state;
+    game.settings.set(MODULE_ID, "state", this.formState);
+    return this.formState;
   }
 
   async #run(fn) {
@@ -118,9 +118,9 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
         ui.notifications.error("Item-Generator: Es gibt Fehler, nichts wurde erstellt.");
         return;
       }
-      const actor = this.state.giveToToken ? canvas.tokens?.controlled[0]?.actor : null;
-      if (this.state.giveToToken && !actor) ui.notifications.warn("Kein Token ausgewählt, Items nur in der Welt erstellt.");
-      const { created, given } = await createItems(result.items, { folderName: this.state.folder, actor });
+      const actor = this.formState.giveToToken ? canvas.tokens?.controlled[0]?.actor : null;
+      if (this.formState.giveToToken && !actor) ui.notifications.warn("Kein Token ausgewählt, Items nur in der Welt erstellt.");
+      const { created, given } = await createItems(result.items, { folderName: this.formState.folder, actor });
       ui.notifications.info(`Item-Generator: ${created.length} Item(s) erstellt${given ? `, ${given} an ${actor.name} gegeben` : ""}.`);
       created[0]?.sheet?.render(true);
       await this.render();
@@ -131,7 +131,7 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
     const { example } = this.#readForm();
     const ex = EXAMPLES[example];
     if (!ex) return;
-    this.state.json = JSON.stringify(ex.data, null, 2);
+    this.formState.json = JSON.stringify(ex.data, null, 2);
     this.result = null;
     await this.render();
   }
@@ -139,7 +139,7 @@ export class ItemGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #onFormat() {
     const { json } = this.#readForm();
     try {
-      this.state.json = JSON.stringify(JSON.parse(json), null, 2);
+      this.formState.json = JSON.stringify(JSON.parse(json), null, 2);
       await this.render();
     } catch (err) {
       ui.notifications.warn(`JSON ist ungültig: ${err.message}`);

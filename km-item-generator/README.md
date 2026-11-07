@@ -36,13 +36,13 @@ Ein vom Generator erstelltes Item kann aus der Seitenleiste zurück in das Textf
 - Munition sind echte Wurfspeere (`canBeAmmo`), die PF2e beim Nachladen in den Bogen lädt und beim Schuss verbraucht.
 - Der Zusatzschaden des Wurfspeers wächst mit der Schlagrune: 1d6, 2d6, 3d6, 4d6.
 
-## Beispiel: Hut der Zauberkunst (Zauber leihen)
+## Beispiel: Hat of Wizardry (Zauber leihen)
 
-Vorlage „Hut der Zauberkunst“: Stufe 3, +1 auf Arkane Künste, und die Aktion **Zauber leihen** (1/Tag),
-die der Träger im Charakterbogen hat, solange der Hut investiert ist.
-Der Knopf in der Aktion öffnet ein Fenster: Arkane Künste gegen SG 15, bei Erfolg Auswahl eines gewöhnlichen
+Vorlage „Hat of Wizardry“ (englisch, `"lang": "en"`): Stufe 3, +1 auf Arcana, und die Aktion **Borrow Spell** (1/Tag),
+die der Träger im Charakterbogen hat, sobald der Hut investiert ist.
+„Use“ im Charakterbogen oder im Argon HUD öffnet ein Fenster: Arcana gegen SG 15, bei Erfolg Auswahl eines gewöhnlichen
 arkanen Zaubertricks, den der Charakter nicht kennt. Er wird als angeborener arkaner Zauber gewirkt
-(eigener Zauber-Eintrag „Geliehen: Hut der Zauberkunst“).
+(eigener Zauber-Eintrag „Borrowed: Hat of Wizardry“).
 
 ## Format
 

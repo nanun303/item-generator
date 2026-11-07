@@ -28,10 +28,11 @@ export const EXAMPLES = {
     ]
   },
   hat: {
-    label: "Hut der Zauberkunst (Zaubertrick leihen, Stufe 3)",
+    label: "Hat of Wizardry (Zaubertrick leihen, Stufe 3, englisch)",
     data: {
+      lang: "en",
       type: "equipment",
-      name: "Hut der Zauberkunst",
+      name: "Hat of Wizardry",
       level: 3,
       price: 60,
       bulk: "-",
@@ -40,17 +41,17 @@ export const EXAMPLES = {
       effects: [{ bonus: 1, to: "arcana", type: "item" }],
       activations: [
         {
-          name: "Zauber leihen",
+          name: "Borrow Spell",
           actions: 2,
           traits: ["concentrate", "manipulate"],
-          frequency: "einmal pro Tag",
+          frequency: "once per day",
           asAction: true,
           borrowSpell: { tradition: "arcane", skill: "arcana", dc: 15, rarity: "common" },
-          text: "Du greifst in die Krempe und tastest nach einem Zauber, den du nicht kennst. Lege einen Wurf auf Arkane Künste gegen SG 15 ab. Bei Erfolg wählst du einen gewöhnlichen arkanen Zaubertrick, den du nicht kennst, und wirkst ihn sofort als angeborenen arkanen Zauber. Bei Fehlschlag verpufft die Magie. Der Versuch verbraucht die Nutzung des Tages."
+          text: "You reach into the brim and grope for a spell you don't know. Attempt a DC 15 Arcana check. On a success, choose a common arcane cantrip you don't know and immediately cast it as an innate arcane spell. On a failure, the magic fizzles. The attempt uses up the hat's daily activation either way."
         }
       ],
       description:
-        "Ein spitzer, nachtblauer Hut, bestickt mit silbernen Sternen. In seiner Krempe scheint das Echo unzähliger Zauber nachzuklingen.\n\nSolange du ihn investiert hast, erhältst du einen Gegenstandsbonus von +1 auf Arkane Künste."
+        "This pointed, midnight-blue hat is embroidered with silver stars. The echo of countless spells seems to linger in its brim.\n\nWhile you have it invested, you gain a +1 item bonus to Arcana checks."
     }
   },
   ring: {
@@ -129,9 +130,11 @@ effects (werden zu Regelelementen):
 activations: [{"name": "...", "actions": 1|2|3|"reaction"|"free", "traits": [...], "frequency": "...", "trigger": "...", "text": "..."}]
 - "asAction": true legt die Aktivierung zusätzlich als Aktion an, die der Träger im Charakterbogen hat, solange das Item angelegt ist.
   "frequency" wie "einmal pro Tag" wird dabei ein Zähler, der bei der täglichen Vorbereitung zurückgesetzt wird.
-- "borrowSpell": {"tradition": "arcane", "skill": "arcana", "dc": 15, "rarity": "common"} fügt der Aktion einen Knopf
-  "Zauber leihen" hinzu: Wurf gegen SG, bei Erfolg Auswahl eines Zaubertricks der Tradition, den der Charakter nicht kennt,
-  gewirkt als angeborener Zauber.
+- "borrowSpell": {"tradition": "arcane", "skill": "arcana", "dc": 15, "rarity": "common"} (nur mit "asAction"):
+  Beim Benutzen der Aktion öffnet sich ein Fenster: Wurf gegen SG, bei Erfolg Auswahl eines Zaubertricks der Tradition,
+  den der Charakter nicht kennt, gewirkt als angeborener Zauber.
+
+lang: "de" (Standard) oder "en" – Sprache der Überschriften, die der Generator selbst schreibt (Activate, Frequency, Effect …)
 system: { ... } setzt beliebige Systemfelder direkt (für Sonderfälle)
 
 Hinweis: Getragene magische Items brauchen den Trait "invested", damit ihre Effekte wirken.`;

@@ -1,6 +1,7 @@
 /**
- * "Zauber leihen": Knopf @BorrowSpell[...] in einer Beschreibung öffnet ein Fenster.
- * 1. Fertigkeitswurf gegen SG (verbraucht eine Nutzung der Aktion)
+ * "Zauber leihen": Wird eine Aktion mit flags["km-item-generator"].borrowSpell benutzt ("Use" im
+ * Charakterbogen oder im Argon HUD), öffnet sich ein Fenster. PF2e hat die Tagesnutzung dabei schon verbraucht.
+ * 1. Fertigkeitswurf gegen SG
  * 2. bei Erfolg: Auswahl eines Zaubertricks aus dem PF2e-Kompendium, den der Charakter nicht kennt
  * 3. Wirken als angeborener Zauber über einen eigenen Zauber-Eintrag
  */
@@ -8,25 +9,14 @@ import { MODULE_ID } from "./convert.js";
 import { isActive } from "./grants.js";
 
 const SPELL_PACK = "pf2e.spells-srd";
-const TAG_PATTERN = /@BorrowSpell\[([^\]]*)\]/g;
 
 /* -------------------------------------------- */
 /*  Reine Logik (testbar)                       */
 /* -------------------------------------------- */
 
-/** "tradition:arcane|skill:arcana|dc:15|rarity:common" → Objekt */
-export function parseBorrowArgs(text) {
-  const out = { tradition: "arcane", skill: "arcana", dc: 15, rarity: ["common"] };
-  for (const part of String(text ?? "").split("|")) {
-    const [k, ...rest] = part.split(":");
-    const v = rest.join(":").trim();
-    if (!k || !v) continue;
-    const key = k.trim();
-    if (key === "dc") out.dc = Number(v) || 0;
-    else if (key === "rarity") out.rarity = v.split(",").map((r) => r.trim()).filter(Boolean);
-    else if (key === "tradition" || key === "skill") out[key] = v;
-  }
-  return out;
+/** Leih-Einstellungen einer Aktion, oder null. */
+export function borrowConfigOf(item) {
+  return item?.getFlag?.(MODULE_ID, "borrowSpell") ?? null;
 }
 
 /**
@@ -73,11 +63,11 @@ function knownSpells(actor) {
 }
 
 /** Eigener angeborener Zauber-Eintrag pro Quelle (z. B. "Hut der Zauberkunst"). */
-async function borrowEntry(actor, sourceName, tradition) {
+async function borrowEntry(actor, sourceName, tradition, lang) {
   const existing = actor.items.find((i) => i.type === "spellcastingEntry" && i.getFlag(MODULE_ID, "borrowFrom") === sourceName);
   if (existing) return existing;
   const [entry] = await actor.createEmbeddedDocuments("Item", [{
-    name: `Geliehen: ${sourceName}`,
+    name: `${lang === "en" ? "Borrowed" : "Geliehen"}: ${sourceName}`,
     type: "spellcastingEntry",
     system: {
       // Angeborene Zauber nutzen Charisma und die beste Zauberkompetenz (mindestens geübt)
@@ -93,10 +83,10 @@ async function borrowEntry(actor, sourceName, tradition) {
 }
 
 /** Legt den gewählten Zauber in den Eintrag (ersetzt den vorherigen) und wirkt ihn. */
-async function castBorrowed(actor, sourceName, tradition, uuid) {
+async function castBorrowed(actor, sourceName, { tradition, lang }, uuid) {
   const spell = await fromUuid(uuid);
   if (!spell) throw new Error("Zauber nicht gefunden.");
-  const entry = await borrowEntry(actor, sourceName, tradition);
+  const entry = await borrowEntry(actor, sourceName, tradition, lang);
   // Den zuletzt geliehenen Zauber entfernen; der neue bleibt bis zum nächsten Mal, damit die Chat-Knöpfe funktionieren
   const old = actor.items.filter((i) => i.type === "spell" && i.system.location?.value === entry.id).map((i) => i.id);
   if (old.length) await actor.deleteEmbeddedDocuments("Item", old);
@@ -116,11 +106,13 @@ async function castBorrowed(actor, sourceName, tradition, uuid) {
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
-  constructor({ actor, action, args }, options) {
+  /** prepaid: die Nutzung wurde schon verbraucht (PF2e "Use"), das Fenster zieht nichts mehr ab */
+  constructor({ actor, action, args, prepaid = false }, options) {
     super(options);
     this.actor = actor;
     this.action = action;
     this.args = args;
+    this.prepaid = prepaid;
     this.stage = "check";
     this.choices = [];
     this.busy = false;
@@ -155,7 +147,8 @@ export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
       skillLabel: stat?.label ?? this.args.skill,
       dc: this.args.dc,
       uses,
-      usedUp: !!uses && uses.value <= 0,
+      prepaid: this.prepaid,
+      usedUp: !this.prepaid && !!uses && uses.value <= 0,
       stage: this.stage,
       isCheck: this.stage === "check",
       isChoose: this.stage === "choose",
@@ -179,13 +172,13 @@ export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onRoll() {
     await this.#run(async () => {
-      const uses = this.uses;
+      const uses = this.prepaid ? null : this.uses;
       if (uses && uses.value <= 0) {
         ui.notifications.warn("Heute schon benutzt.");
         return;
       }
       const granter = this.actor.items.get(this.action?.getFlag(MODULE_ID, "grantedFrom") ?? "");
-      if (granter && !isActive(granter)) {
+      if (!this.prepaid && granter && !isActive(granter)) {
         ui.notifications.warn(`${granter.name} ist nicht angelegt bzw. investiert.`);
         return;
       }
@@ -213,7 +206,7 @@ export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.#run(async () => {
       const uuid = this.element.querySelector("select[name=spell]")?.value;
       if (!uuid) return;
-      await castBorrowed(this.actor, this.sourceName, this.args.tradition, uuid);
+      await castBorrowed(this.actor, this.sourceName, this.args, uuid);
       await this.close();
     });
   }
@@ -224,56 +217,41 @@ export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 /* -------------------------------------------- */
-/*  Knopf in Beschreibungen                     */
+/*  Benutzen der Aktion → Fenster               */
 /* -------------------------------------------- */
 
-async function actorForButton(el) {
-  let item = el.dataset.itemUuid ? await fromUuid(el.dataset.itemUuid).catch(() => null) : null;
-  let actor = item?.actor ?? null;
-  if (!actor) {
-    const message = game.messages.get(el.closest("[data-message-id]")?.dataset.messageId ?? "");
-    actor = message?.actor ?? null;
-  }
-  actor ??= canvas.tokens?.controlled[0]?.actor ?? game.user.character ?? null;
-  // Die Aktion mit dem Tageszähler gehört zum Charakter
-  if (item?.actor !== actor) item = null;
-  item ??=
-    actor?.items.find((i) => i.type === "action" && i.getFlag(MODULE_ID, "grantedFrom") && i.system.description?.value?.includes("@BorrowSpell")) ??
-    actor?.items.find((i) => i.type === "action" && i.system.description?.value?.includes("@BorrowSpell")) ??
-    null;
-  return { actor, action: item };
-}
+/**
+ * PF2e postet beim Benutzen einer Aktion ("Use" im Charakterbogen oder Argon HUD) eine Chatkarte mit
+ * flags.pf2e.origin.uuid und verbraucht dabei die Tagesnutzung. Für Aktionen mit Leih-Einstellungen
+ * öffnet sich danach das Fenster beim Spieler, der sie benutzt hat.
+ */
+export async function onActionUsed(message, userId) {
+  if (userId !== game.user.id) return null;
+  const uuid = message.flags?.pf2e?.origin?.uuid;
+  if (!uuid) return null;
+  const action = await fromUuid(uuid).catch(() => null);
+  const args = borrowConfigOf(action);
+  const actor = action?.actor;
+  if (!args || !actor?.isOwner) return null;
 
-async function onClick(event) {
-  const el = event.target.closest?.("[data-kmi-borrow]");
-  if (!el) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const { actor, action } = await actorForButton(el);
-  if (!actor) {
-    ui.notifications.warn("Kein Charakter gefunden. Wähle dein Token aus.");
-    return;
+  // Gegenstand nicht angelegt/investiert: Nutzung zurückgeben, nichts öffnen
+  const granter = actor.items.get(action.getFlag(MODULE_ID, "grantedFrom") ?? "");
+  if (granter && !isActive(granter)) {
+    const f = action.system.frequency;
+    if (f) await action.update({ "system.frequency.value": Math.min(f.max, (f.value ?? 0) + 1) });
+    ui.notifications.warn(`${granter.name} ist nicht angelegt bzw. investiert. Die Nutzung wurde zurückgegeben.`);
+    return null;
   }
-  if (!actor.isOwner) {
-    ui.notifications.warn(`Du kannst ${actor.name} nicht steuern.`);
-    return;
-  }
-  new BorrowSpellApp({ actor, action, args: parseBorrowArgs(el.dataset.kmiBorrow) }).render(true);
+  const app = new BorrowSpellApp({ actor, action, args, prepaid: true });
+  app.render(true);
+  return app;
 }
 
 export function registerBorrowSpell() {
-  CONFIG.TextEditor.enrichers.push({
-    pattern: TAG_PATTERN,
-    enricher: (match, options) => {
-      const a = document.createElement("a");
-      a.classList.add("kmi-borrow-button");
-      a.dataset.kmiBorrow = match[1];
-      const relative = options?.relativeTo;
-      if (relative?.uuid) a.dataset.itemUuid = relative.uuid;
-      const args = parseBorrowArgs(match[1]);
-      a.innerHTML = `<i class="fa-solid fa-hat-wizard"></i> Zauber leihen (SG ${args.dc})`;
-      return a;
-    }
+  Hooks.on("createChatMessage", (message, options, userId) => {
+    onActionUsed(message, userId).catch((err) => {
+      console.error(`${MODULE_ID} |`, err);
+      ui.notifications.error(`Zauber leihen: ${err.message}`);
+    });
   });
-  document.addEventListener("click", onClick, true);
 }

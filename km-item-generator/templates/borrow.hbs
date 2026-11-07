@@ -1,13 +1,14 @@
 {{!-- Felder immer mit "this." ansprechen: manche Namen sind auch PF2e-Handlebars-Helfer --}}
 <div class="kmi-borrow-body">
   <p><strong>{{this.actorName}}</strong> versucht, mit <em>{{this.sourceName}}</em> einen Zaubertrick zu leihen.</p>
-  {{#if this.uses}}<p class="kmi-meta">Nutzungen heute: {{this.uses.value}} / {{this.uses.max}}</p>{{/if}}
+  {{#if this.prepaid}}<p class="kmi-meta">Die Nutzung für heute ist eingesetzt.</p>
+  {{else if this.uses}}<p class="kmi-meta">Nutzungen heute: {{this.uses.value}} / {{this.uses.max}}</p>{{/if}}
 
   {{#if this.isCheck}}
     {{#if this.usedUp}}
     <p class="kmi-warning"><i class="fa-solid fa-hourglass-end"></i> Heute schon benutzt. Wieder verfügbar nach der täglichen Vorbereitung.</p>
     {{else}}
-    <p>Lege einen Wurf auf <strong>{{this.skillLabel}}</strong> gegen <strong>SG {{this.dc}}</strong> ab. Der Versuch verbraucht die Nutzung, auch bei Fehlschlag.</p>
+    <p>Lege einen Wurf auf <strong>{{this.skillLabel}}</strong> gegen <strong>SG {{this.dc}}</strong> ab.{{#unless this.prepaid}} Der Versuch verbraucht die Nutzung, auch bei Fehlschlag.{{/unless}}</p>
     <footer class="kmi-footer">
       <button type="button" data-action="cancel">Abbrechen</button>
       <button type="button" data-action="roll" class="kmi-primary"><i class="fa-solid fa-dice-d20"></i> Würfeln</button>

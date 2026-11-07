@@ -18,6 +18,22 @@ const STRIKING = { striking: 1, greater: 2, "greater-striking": 2, greaterStriki
 const RESILIENT = { resilient: 1, greater: 2, "greater-resilient": 2, major: 3, "major-resilient": 3 };
 const ACTION_GLYPHS = { 1: "1", 2: "2", 3: "3", reaction: "R", free: "F", "1-2": "1 or 2", "1-3": "1 to 3", "2-3": "2 or 3" };
 
+/** Texte, die der Generator selbst in Beschreibungen schreibt ("lang": "de" oder "en"). */
+const LABELS = {
+  de: {
+    activate: "Aktivieren", frequency: "Häufigkeit", trigger: "Auslöser", requirements: "Voraussetzungen", effect: "Effekt",
+    asAction: "Steht als Aktion im Charakterbogen, solange der Gegenstand angelegt ist.", grantedBy: "Gewährt von"
+  },
+  en: {
+    activate: "Activate", frequency: "Frequency", trigger: "Trigger", requirements: "Requirements", effect: "Effect",
+    asAction: "Available as an action on your character sheet while the item is worn and invested.", grantedBy: "Granted by"
+  }
+};
+
+function labelsFor(entry) {
+  return LABELS[entry.lang] ?? LABELS.de;
+}
+
 /** Kurzformen für häufige Selektoren. "this-attack"/"this-damage" meinen die Angriffe dieser Waffe. */
 const SELECTOR_ALIASES = {
   "this-attack": "{item|_id}-attack",
@@ -30,7 +46,7 @@ const SELECTOR_ALIASES = {
 
 /** Erlaubte Felder pro Eintrag, damit Tippfehler als Warnung auffallen. */
 const KNOWN_KEYS = new Set([
-  "type", "base", "name", "img", "level", "rarity", "traits", "addTraits", "removeTraits", "price", "bulk", "quantity",
+  "lang", "type", "base", "name", "img", "level", "rarity", "traits", "addTraits", "removeTraits", "price", "bulk", "quantity",
   "usage", "description", "activations", "effects", "rules", "system", "folder",
   // Waffe
   "damage", "reload", "range", "ammo", "canBeAmmo", "group", "category", "runes",
@@ -359,21 +375,22 @@ function toHtml(text) {
 function buildDescription(entry, log) {
   const acts = asArray(entry.activations);
   if (entry.description === undefined && !acts.length) return null;
+  const L = labelsFor(entry);
   let html = toHtml(entry.description);
   for (const a of acts) {
     if (!a || typeof a !== "object") continue;
     const glyph = ACTION_GLYPHS[a.actions];
     if (a.actions !== undefined && !glyph) log.warn(`Aktivierung: „actions“ ${a.actions} unbekannt (1, 2, 3, reaction, free).`);
-    const head = [`<strong>Aktivieren${a.name ? `—${escapeHtml(a.name)}` : ""}</strong>`];
+    const head = [`<strong>${L.activate}${a.name ? `—${escapeHtml(a.name)}` : ""}</strong>`];
     if (glyph) head.push(`<span class="action-glyph">${glyph}</span>`);
     if (a.traits) head.push(`(${asArray(a.traits).map(escapeHtml).join(", ")})`);
     const parts = [head.join(" ")];
-    if (a.frequency) parts.push(`<strong>Häufigkeit</strong> ${escapeHtml(a.frequency)}`);
-    if (a.trigger) parts.push(`<strong>Auslöser</strong> ${escapeHtml(a.trigger)}`);
-    if (a.requirements) parts.push(`<strong>Voraussetzungen</strong> ${escapeHtml(a.requirements)}`);
+    if (a.frequency) parts.push(`<strong>${L.frequency}</strong> ${escapeHtml(a.frequency)}`);
+    if (a.trigger) parts.push(`<strong>${L.trigger}</strong> ${escapeHtml(a.trigger)}`);
+    if (a.requirements) parts.push(`<strong>${L.requirements}</strong> ${escapeHtml(a.requirements)}`);
     html += `<hr /><p>${parts.join("; ")}</p>`;
-    if (a.text) html += toHtml(`Effekt: ${a.text}`).replace("<p>Effekt:", "<p><strong>Effekt</strong>");
-    if (a.asAction) html += "<p><em>Steht als Aktion im Charakterbogen, solange der Gegenstand angelegt ist.</em></p>";
+    if (a.text) html += toHtml(`${L.effect}: ${a.text}`).replace(`<p>${L.effect}:`, `<p><strong>${L.effect}</strong>`);
+    if (a.asAction) html += `<p><em>${L.asAction}</em></p>`;
   }
   return html;
 }
@@ -406,22 +423,28 @@ export function parseUses(v, log) {
   return { max, per };
 }
 
-/** Text für den Zauber-leihen-Knopf (siehe borrow.js). */
-export function borrowSpellTag(b) {
+/** Einstellungen für "Zauber leihen" (siehe borrow.js), mit Standardwerten. */
+export function borrowSpellConfig(b, entry) {
   const o = { tradition: "arcane", skill: "arcana", dc: 15, rarity: "common", ...b };
-  return `@BorrowSpell[tradition:${o.tradition}|skill:${o.skill}|dc:${o.dc}|rarity:${o.rarity}]`;
+  return {
+    tradition: String(o.tradition),
+    skill: String(o.skill),
+    dc: Number(o.dc) || 0,
+    rarity: Array.isArray(o.rarity) ? o.rarity.map(String) : String(o.rarity).split(",").map((r) => r.trim()).filter(Boolean),
+    lang: entry.lang === "en" ? "en" : "de"
+  };
 }
 
 function buildAction(a, entry, log) {
+  const L = labelsFor(entry);
   const actionType = a.actions === "reaction" ? "reaction" : a.actions === "free" ? "free" : "action";
   const count = Number(a.actions);
   const parts = [];
-  if (a.trigger) parts.push(`<strong>Auslöser</strong> ${escapeHtml(a.trigger)}`);
-  if (a.requirements) parts.push(`<strong>Voraussetzungen</strong> ${escapeHtml(a.requirements)}`);
+  if (a.trigger) parts.push(`<strong>${L.trigger}</strong> ${escapeHtml(a.trigger)}`);
+  if (a.requirements) parts.push(`<strong>${L.requirements}</strong> ${escapeHtml(a.requirements)}`);
   let html = parts.length ? `<p>${parts.join("; ")}</p>` : "";
   html += toHtml(a.text);
-  if (a.borrowSpell) html += `<p>${borrowSpellTag(a.borrowSpell)}</p>`;
-  html += `<p><em>Gewährt von: ${escapeHtml(entry.name)}</em></p>`;
+  html += `<p><em>${L.grantedBy}: ${escapeHtml(entry.name)}</em></p>`;
 
   const uses = parseUses(a.uses ?? a.frequency, log);
   return {
@@ -437,7 +460,8 @@ function buildAction(a, entry, log) {
       ...(uses ? { frequency: { ...uses, value: uses.max } } : {})
     },
     flags: {
-      [MODULE_ID]: { grantedBy: String(entry.name) },
+      // borrowSpell: beim Benutzen der Aktion öffnet sich das Fenster "Zauber leihen" (borrow.js)
+      [MODULE_ID]: { grantedBy: String(entry.name), ...(a.borrowSpell ? { borrowSpell: borrowSpellConfig(a.borrowSpell, entry) } : {}) },
       // Argon Combat HUD (PF2e) zeigt Aktionen von Gegenständen nur als Favorit im Hauptfeld
       "enhancedcombathud-pf2e": { isFavourite: true }
     }

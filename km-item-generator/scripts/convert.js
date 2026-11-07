@@ -436,7 +436,11 @@ function buildAction(a, entry, log) {
       category: null,
       ...(uses ? { frequency: { ...uses, value: uses.max } } : {})
     },
-    flags: { [MODULE_ID]: { grantedBy: String(entry.name) } }
+    flags: {
+      [MODULE_ID]: { grantedBy: String(entry.name) },
+      // Argon Combat HUD (PF2e) zeigt Aktionen von Gegenständen nur als Favorit im Hauptfeld
+      "enhancedcombathud-pf2e": { isFavourite: true }
+    }
   };
 }
 

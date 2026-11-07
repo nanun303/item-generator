@@ -2,6 +2,7 @@ import { MODULE_ID, buildItems } from "./convert.js";
 import { ItemGeneratorApp } from "./app.js";
 import { convertContext, createItems } from "./foundry.js";
 import { registerBorrowSpell } from "./borrow.js";
+import { registerGrantHooks } from "./grants.js";
 
 let app = null;
 
@@ -41,6 +42,8 @@ Hooks.once("init", () => {
 
   // Knopf @BorrowSpell[...] in Beschreibungen (für alle Spieler)
   registerBorrowSpell();
+  // Gewährte Aktionen beim Anlegen/Investieren hinzufügen, beim Löschen entfernen
+  registerGrantHooks();
 
   // Für Makros: game.modules.get("km-item-generator").api.create({ ... })
   game.modules.get(MODULE_ID).api = {

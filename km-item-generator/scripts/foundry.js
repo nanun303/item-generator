@@ -75,14 +75,10 @@ export async function createItems(items, { folderName, actor } = {}) {
     const item = structuredClone(raw);
     const grants = item._grants ?? [];
     delete item._grants;
-    // Gewährte Aktionen zuerst als Welt-Items anlegen, dann per GrantItem verknüpfen.
-    // reevaluateOnUpdate: die Aktion erscheint beim Anlegen/Investieren und verschwindet beim Ablegen.
+    // Gewährte Aktionen zuerst als Welt-Items anlegen; der Gegenstand merkt sich ihre UUIDs (siehe grants.js)
     if (grants.length) {
       const actions = await ItemCls.createDocuments(grants.map((g) => ({ ...g, folder: folder?.id ?? null })));
-      item.system.rules = [
-        ...(item.system.rules ?? []),
-        ...actions.map((a) => ({ key: "GrantItem", uuid: a.uuid, reevaluateOnUpdate: true }))
-      ];
+      item.flags = { ...(item.flags ?? {}), [MODULE_ID]: { ...(item.flags?.[MODULE_ID] ?? {}), grants: actions.map((a) => a.uuid) } };
     }
     sources.push(item);
   }

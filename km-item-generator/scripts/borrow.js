@@ -5,6 +5,7 @@
  * 3. Wirken als angeborener Zauber über einen eigenen Zauber-Eintrag
  */
 import { MODULE_ID } from "./convert.js";
+import { isActive } from "./grants.js";
 
 const SPELL_PACK = "pf2e.spells-srd";
 const TAG_PATTERN = /@BorrowSpell\[([^\]]*)\]/g;
@@ -183,6 +184,11 @@ export class BorrowSpellApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ui.notifications.warn("Heute schon benutzt.");
         return;
       }
+      const granter = this.actor.items.get(this.action?.getFlag(MODULE_ID, "grantedFrom") ?? "");
+      if (granter && !isActive(granter)) {
+        ui.notifications.warn(`${granter.name} ist nicht angelegt bzw. investiert.`);
+        return;
+      }
       const stat = this.actor.skills?.[this.args.skill] ?? this.actor.getStatistic?.(this.args.skill);
       if (!stat) throw new Error(`${this.actor.name} hat keine Fertigkeit „${this.args.skill}“.`);
       const roll = await stat.roll({
@@ -231,7 +237,10 @@ async function actorForButton(el) {
   actor ??= canvas.tokens?.controlled[0]?.actor ?? game.user.character ?? null;
   // Die Aktion mit dem Tageszähler gehört zum Charakter
   if (item?.actor !== actor) item = null;
-  item ??= actor?.items.find((i) => i.type === "action" && i.system.description?.value?.includes("@BorrowSpell")) ?? null;
+  item ??=
+    actor?.items.find((i) => i.type === "action" && i.getFlag(MODULE_ID, "grantedFrom") && i.system.description?.value?.includes("@BorrowSpell")) ??
+    actor?.items.find((i) => i.type === "action" && i.system.description?.value?.includes("@BorrowSpell")) ??
+    null;
   return { actor, action: item };
 }
 

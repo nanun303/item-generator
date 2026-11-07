@@ -2,7 +2,7 @@
   "id": "km-item-generator",
   "title": "Item-Generator",
   "description": "Erstellt PF2e-Items aus einem einfachen JSON: Grundwaffe aus dem Kompendium, Runen, Boni, Zusatzschaden, Munition, Aktivierungen.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "authors": [{ "name": "Narin" }],
   "compatibility": {
     "minimum": "13",

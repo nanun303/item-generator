@@ -185,7 +185,7 @@ function summarize(item) {
     lines,
     rules,
     description: s.description?.value ?? "",
-    raw: JSON.stringify(item, null, 2)
+    sourceJson: JSON.stringify(item, null, 2)
   };
 }
 

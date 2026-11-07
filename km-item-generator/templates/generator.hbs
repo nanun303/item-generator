@@ -1,36 +1,37 @@
 <div class="kmi-body">
   <div class="kmi-toolbar">
-    <select name="example">{{selectOptions examples selected=state.example}}</select>
+    <select name="example">{{selectOptions this.examples selected=this.state.example}}</select>
     <button type="button" data-action="loadExample"><i class="fa-solid fa-file-import"></i> Vorlage laden</button>
     <button type="button" data-action="format" data-tooltip="JSON ordentlich einrücken"><i class="fa-solid fa-align-left"></i></button>
     <button type="button" data-action="copyFormat" data-tooltip="Formatbeschreibung kopieren, z. B. für eine KI"><i class="fa-solid fa-clipboard"></i> Format kopieren</button>
   </div>
 
-  <textarea name="json" class="kmi-json" spellcheck="false" placeholder='{ "base": "longsword", "name": "…", "level": 4 }'>{{state.json}}</textarea>
+  <textarea name="json" class="kmi-json" spellcheck="false" placeholder='{ "base": "longsword", "name": "…", "level": 4 }'>{{this.state.json}}</textarea>
   <p class="hint">Tipp: Ein mit dem Generator erstelltes Item aus der Seitenleiste hierher ziehen, um es zu bearbeiten.</p>
 
   <div class="kmi-options">
-    <label>Ordner <input type="text" name="folder" value="{{state.folder}}" placeholder="kein Ordner"></label>
+    <label>Ordner <input type="text" name="folder" value="{{this.state.folder}}" placeholder="kein Ordner"></label>
     <label class="checkbox">
-      <input type="checkbox" name="giveToToken" {{checked state.giveToToken}}>
-      auch dem ausgewählten Token geben{{#if tokenName}} ({{tokenName}}){{/if}}
+      <input type="checkbox" name="giveToToken" {{checked this.state.giveToToken}}>
+      auch dem ausgewählten Token geben{{#if this.tokenName}} ({{this.tokenName}}){{/if}}
     </label>
   </div>
 
-  {{#if result}}
+  {{!-- Felder immer mit "this." ansprechen: Namen wie "raw" sind auch PF2e-Handlebars-Helfer --}}
+  {{#if this.result}}
   <div class="kmi-result">
-    {{#each result.errors}}<p class="kmi-error"><i class="fa-solid fa-circle-xmark"></i> {{this}}</p>{{/each}}
-    {{#each result.warnings}}<p class="kmi-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
-    {{#each result.items}}
+    {{#each this.result.errors}}<p class="kmi-error"><i class="fa-solid fa-circle-xmark"></i> {{this}}</p>{{/each}}
+    {{#each this.result.warnings}}<p class="kmi-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+    {{#each this.result.items}}
     <section class="kmi-item">
-      <h3>{{name}} <span class="kmi-meta">{{type}}, Stufe {{level}}{{#if quantity}}, ×{{quantity}}{{/if}}</span></h3>
-      {{#if base}}<p class="kmi-meta">Grundlage: {{base}}</p>{{/if}}
+      <h3>{{this.name}} <span class="kmi-meta">{{this.type}}, Stufe {{this.level}}{{#if this.quantity}}, ×{{this.quantity}}{{/if}}</span></h3>
+      {{#if this.base}}<p class="kmi-meta">Grundlage: {{this.base}}</p>{{/if}}
       <ul>
-        {{#each lines}}<li>{{this}}</li>{{/each}}
-        {{#each rules}}<li class="kmi-rule"><i class="fa-solid fa-gears"></i> {{this}}</li>{{/each}}
+        {{#each this.lines}}<li>{{this}}</li>{{/each}}
+        {{#each this.rules}}<li class="kmi-rule"><i class="fa-solid fa-gears"></i> {{this}}</li>{{/each}}
       </ul>
-      {{#if description}}<div class="kmi-description">{{{description}}}</div>{{/if}}
-      <details><summary>Foundry-Daten</summary><pre>{{raw}}</pre></details>
+      {{#if this.description}}<div class="kmi-description">{{{this.description}}}</div>{{/if}}
+      <details><summary>Foundry-Daten</summary><pre>{{this.sourceJson}}</pre></details>
     </section>
     {{/each}}
   </div>
